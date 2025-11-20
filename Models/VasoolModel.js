@@ -52,13 +52,8 @@ const VasoolSchema = new mongoose.Schema({
 VasoolSchema.pre('save', function(next) {
   if (this.isNew && this.startingDate && !this.endingDate) {
     const start = new Date(this.startingDate);
-    const currentDay = start.getDay();
-    let daysToSaturday = 6 - currentDay;
-    const firstSaturday = new Date(start.getTime() + daysToSaturday * 24 * 60 * 60 * 1000);
-    
-    // Set endingDate to the 10th Saturday (9 weeks after first)
-    this.endingDate = new Date(firstSaturday.getTime() + 9 * 7 * 24 * 60 * 60 * 1000);
-    
+    const tenWeeksInMs = 10 * 7 * 24 * 60 * 60 * 1000;
+    this.endingDate = new Date(start.getTime() + tenWeeksInMs);
   }
   next();
 });

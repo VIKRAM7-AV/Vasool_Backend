@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { NewUser, getAllUsers, newAgent , BookingVasool ,allAgent } from '../controller/UserController.js';
+import { NewUser, getAllUsers, newAgent , BookingVasool ,allAgent, allVasool,vasoolPayment } from '../controller/UserController.js';
 
 const router = express.Router();
 
@@ -24,5 +24,7 @@ router.post('/newagent', newAgent);
 router.get('/agents', allAgent);
 
 router.post('/newbooking', BookingVasool)
+router.get('/allvasool', allVasool)
+router.post('/payment/:vasoolId', vasoolPayment)
 
 export default router;

@@ -261,7 +261,10 @@ export const BookingVasool = async (req, res) => {
       return res.status(404).json({ message: "Agent not found" });
     }
 
-    // Create new Vasool entry
+    const AgentAmount = amount/agent.commissionRate 
+    agent.amount = agent.amount + AgentAmount;
+    await agent.save();
+
     const newVasool = new Vasool({
       userId,
       agentId,
@@ -270,7 +273,6 @@ export const BookingVasool = async (req, res) => {
     });
     const savedVasool = await newVasool.save();
 
-    // Link Vasool to User
     user.vasool.push(savedVasool._id);
     await user.save();
 
@@ -283,3 +285,165 @@ export const BookingVasool = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", details: error.message });
   }
 }
+
+
+export const allVasool = async (req, res) => {
+  try {
+    const vasools = await Vasool.find({status: "active"}).populate('userId').populate('agentId');
+    return res.status(200).json({ data: vasools });
+  } catch (error) {
+    console.error("Error fetching vasools:", error);
+    return res.status(500).json({ message: "Internal server error", details: error.message });
+  }
+}
+
+
+// controllers/vasoolController.js
+export const vasoolPayment = async (req, res) => {
+  try {
+    const { vasoolId } = req.params;
+    const { amount, status } = req.body;
+
+    // Strict: only "paid" or "due"
+    if (!["paid", "due"].includes(status)) {
+      return res.status(400).json({
+        message: 'Status must be either "paid" or "due" only',
+      });
+    }
+
+    if (status === "paid") {
+      if (!amount || typeof amount !== "number" || amount <= 0) {
+        return res.status(400).json({
+          message: "Amount is required and must be positive when status is paid",
+        });
+      }
+    }
+
+    let vasool = await Vasool.findById(vasoolId).populate("userId");
+    if (!vasool) return res.status(404).json({ message: "Vasool not found" });
+
+    const weeklyInstallment = vasool.amount / 10
+    if (!weeklyInstallment || weeklyInstallment <= 0) {
+      return res.status(400).json({ message: "Weekly installment not configured" });
+    }
+
+    // One entry per day only
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(today);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const alreadyEntry = vasool.payments?.some(p => {
+      const pDate = new Date(p.date);
+      return pDate >= today && pDate <= todayEnd;
+    });
+
+    if (alreadyEntry) {
+      return res.status(400).json({
+        message: "Already one entry exists for today",
+      });
+    }
+
+    let collectedChange = 0;
+    let pendingChange = 0;
+    let recordedAmount = 0;
+    let note = "";
+
+    if (status === "paid") {
+      recordedAmount = amount;
+      collectedChange = amount;
+
+      if (amount >= weeklyInstallment) {
+        const extra = amount - weeklyInstallment;
+        note = extra > 0 ? "Extra paid – reduced old pending" : "Full weekly paid";
+
+        if (extra > 0 && vasool.pendingAmount > 0) {
+          const reduceBy = Math.min(extra, vasool.pendingAmount);
+          pendingChange -= reduceBy;
+        }
+      } else {
+        const shortfall = weeklyInstallment - amount;
+        pendingChange += shortfall;
+        note = "Partial paid – shortfall added to pending";
+      }
+    } else if (status === "due") {
+      recordedAmount = weeklyInstallment;
+      pendingChange += weeklyInstallment;
+      note = "Weekly payment missed – marked as due";
+    }
+
+    // Calculate new pending (never negative)
+    const tempPending = vasool.pendingAmount + pendingChange;
+    const newPending = Math.max(0, tempPending);
+
+    // Check if today is the endingDate
+    const todayDateOnly = new Date(today);
+    todayDateOnly.setHours(0, 0, 0, 0);
+    const endingDateOnly = new Date(vasool.endingDate);
+    endingDateOnly.setHours(0, 0, 0, 0);
+
+    const isLastDay = todayDateOnly.getTime() === endingDateOnly.getTime();
+
+    // Determine final status
+    let finalStatus = vasool.status; // default keep current
+
+    if (isLastDay) {
+      if (newPending === 0) {
+        finalStatus = "completed";
+      } else {
+        finalStatus = "arrear";
+      }
+    } else {
+      // Not last day → keep active (or whatever it was, but usually active)
+      finalStatus = "active";
+    }
+
+    const newPayment = {
+      amount: recordedAmount,
+      status, // "paid" or "due"
+      date: new Date(),
+      note,
+    };
+
+    const updatedVasool = await Vasool.findByIdAndUpdate(
+      vasoolId,
+      {
+        $push: { payments: newPayment },
+        $inc: {
+          collectedAmount: collectedChange,
+        },
+        $set: {
+          pendingAmount: newPending,
+          status: finalStatus, // auto update completed or arrear on last day
+        },
+      },
+      { new: true }
+    ).populate("userId");
+
+    // Push notification full-a remove pannitten as per your request
+
+    return res.status(200).json({
+      message: "Vasool entry successful",
+      data: {
+        type: status,
+        amountRecorded: recordedAmount,
+        collectedToday: collectedChange,
+        previousPending: vasool.pendingAmount,
+        pendingChange,
+        newPendingAmount: newPending,
+        vasoolStatus: finalStatus,
+        isLastDay,
+        endingDate: vasool.endingDate,
+        note,
+        totalCollected: updatedVasool.collectedAmount,
+      },
+    });
+
+  } catch (error) {
+    console.error("Vasool Payment Error:", error);
+    return res.status(500).json({
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};

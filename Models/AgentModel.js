@@ -20,6 +20,9 @@ const AgentSchema = new mongoose.Schema({
     },
     amount:{
         type: Number
+    },
+    missingAmount:{
+        type: Number
     }
 }, { timestamps: true });
 
