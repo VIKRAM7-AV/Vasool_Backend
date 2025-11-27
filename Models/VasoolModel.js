@@ -41,7 +41,7 @@ const VasoolSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ["active", "completed", "closed", "arrear"],
+      enum: ["active", "completed", "missing", "arrear"],
       default: "active",
     },
     payments: [paymentSchema],
