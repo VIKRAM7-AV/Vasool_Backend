@@ -1,5 +1,5 @@
 import express from 'express';
-import { NewAdmin, LoginAdmin, RefreshTokenCon, Getme } from '../controller/AdminController.js';
+import { NewAdmin, LoginAdmin, RefreshTokenCon, Getme,updatePassword } from '../controller/AdminController.js';
 import { verifyToken } from '../utils/jwt.js';
 
 export const authenticateAdmin = (req, res, next) => {
@@ -23,5 +23,5 @@ router.post('/new-admin',NewAdmin);
 router.post("/login",LoginAdmin);
 router.post("/refresh-token", RefreshTokenCon);
 router.get("/me",authenticateAdmin, Getme);
-
+router.put('/update-password', authenticateAdmin, updatePassword);
 export default router;

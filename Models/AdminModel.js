@@ -15,6 +15,18 @@ const AdminSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    currentAmount: {
+        type: Number,
+        default: 0
+    },
+    balanceAmount: {
+        type: Number,
+        default: 0
+    },
+    inverstAmount: {
+        type: Number,
+        default: 0
+    }
 },{timestamps: true});
 
 const Admin = mongoose.model('Admin', AdminSchema);

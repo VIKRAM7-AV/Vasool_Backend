@@ -7,29 +7,12 @@ const UserSchema = new mongoose.Schema(
       required: true,
     },
     profile: {
-      type: String,
-      required: true, // Added: Align with validation
-    },
-    dob: {
-      type: Date,
-      required: true,
+      type: String
     },
     phone: {
       type: Number,
       required: true,
       unique: true,
-    },
-    occupation: {
-      type: String,
-      required: true,
-    },
-    Salary: { // Consider renaming to 'salary' for camelCase consistency
-      type: Number,
-      required: true, // Added: Align with validation
-    },
-    Address: { // Consider renaming to 'address'
-      type: String,
-      required: true,
     },
     status: {
       type: String,
@@ -43,14 +26,9 @@ const UserSchema = new mongoose.Schema(
         required: true
       },
     ],
-    proof1: {
-      type: String,
-      required: true, // Added: Align with validation
-    },
-    proof2: {
-      type: String,
-      required: true, // Added: Align with validation
-    },
+    proof: {
+      type: String
+    }
   },
   {
     timestamps: true,
