@@ -330,14 +330,21 @@ export const BookingVasool = async (req, res) => {
     const disbursementAmount = amount * 0.80; // Calculate 80%
 
     const admin = await Admin.findOne();
-    if (admin) {
-        // Deduct the disbursement amount from Admin's balance
-        admin.balanceAmount = (admin.balanceAmount || 0) - disbursementAmount;
-        await admin.save();
-    } else {
-        // Optional: Handle case if no admin exists (though likely initialized)
-        console.warn("Warning: No Admin found to deduct balance.");
+    if (!admin) {
+        // Admin not initialized — reject booking
+        console.warn("Warning: No Admin account found for disbursement.");
+        return res.status(500).json({ message: "Admin account not initialized" });
     }
+
+    // Ensure Admin has sufficient balance before disbursing
+    const currentBalance = admin.balanceAmount || 0;
+    if (currentBalance < disbursementAmount) {
+        return res.status(400).json({ message: "Insufficient admin balance for disbursement" });
+    }
+
+    // Deduct the disbursement amount from Admin's balance
+    admin.balanceAmount = currentBalance - disbursementAmount;
+    await admin.save();
     // ---------------------------------------------------------
 
     // 3. Prepare data object

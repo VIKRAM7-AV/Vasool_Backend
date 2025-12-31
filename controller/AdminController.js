@@ -188,3 +188,43 @@ export const updatePassword = async (req, res) => {
 }; 
 
 
+// Add this inside AdminController.js
+
+export const forgetPassword = async (req, res) => {
+  try {
+    const { username, email, newPassword } = req.body;
+
+    // 1. Validate Input
+    if (!username || !email || !newPassword) {
+      return res.status(400).json({ message: "Username, Email, and New Password are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters long" });
+    }
+
+    // 2. Find Admin matching BOTH username AND email
+    // This is crucial: We must ensure the email belongs to that specific username
+    const admin = await Admin.findOne({ username: username, email: email });
+
+    if (!admin) {
+      return res.status(404).json({ 
+        message: "Invalid credentials. Username and Email do not match any account." 
+      });
+    }
+
+    // 3. Hash the New Password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // 4. Update and Save
+    admin.password = hashedPassword;
+    await admin.save();
+
+    return res.status(200).json({ message: "Password has been reset successfully" });
+
+  } catch (error) {
+    console.error("Error in forget password:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};

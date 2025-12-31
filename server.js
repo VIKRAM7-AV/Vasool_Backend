@@ -9,21 +9,45 @@ import { v2 as cloudinary } from 'cloudinary';
 
 
 
+// const app = express();
+// dotenv.config();
+// app.use(cors({
+//     origin: '*',
+//     credentials: true
+// }));
+// app.use(cookieParser());
+// app.use(express.json({ limit: '50mb' }));
+// app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+
 const app = express();
 dotenv.config();
-app.use(cors({
-    origin: '*',
-    credentials: true
-}));
-app.use(cookieParser());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+// --- CORS FIX START ---
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        // Allow all other origins
+        return callback(null, true);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "access_token", "refresh_token"]
+}));
+// --- CORS FIX END ---
+
+app.use(cookieParser());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// ... rest of your code ...
 
 
 app.use('/api/admin', AdminRoute);
